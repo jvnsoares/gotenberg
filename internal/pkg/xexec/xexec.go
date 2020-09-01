@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/thecodingmachine/gotenberg/internal/pkg/xerror"
 	"github.com/thecodingmachine/gotenberg/internal/pkg/xlog"
@@ -66,15 +66,18 @@ func Run(ctx context.Context, logger xlog.Logger, binary string, args ...string)
 		LogBeforeExecute(logger, cmd)
 		// see https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773.
 		kill := func() {
-			err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			if err == nil {
+			// err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid))
+			er := kill.Run()
+			if er == nil {
 				return
 			}
-			if !strings.Contains(err.Error(), "no such process") {
-				logger.ErrorOp(op, err)
+			if !strings.Contains(er.Error(), "no such process") {
+				logger.ErrorOp(op, er)
 			}
 		}
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+		// cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		if err := cmd.Start(); err != nil {
 			return err
 		}

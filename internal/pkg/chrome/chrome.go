@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/mafredri/cdp/devtool"
@@ -75,7 +75,7 @@ func cmd(logger xlog.Logger, ignoreCertificateErrors bool) (*exec.Cmd, error) {
 	if err != nil {
 		return nil, xerror.New(op, err)
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return cmd, nil
 }
 
@@ -83,14 +83,16 @@ func kill(logger xlog.Logger, proc *os.Process) error {
 	const op string = "chrome.kill"
 	logger.DebugOp(op, "killing Google Chrome headless process using port 9222...")
 	resolver := func() error {
-		err := syscall.Kill(-proc.Pid, syscall.SIGKILL)
-		if err == nil {
+		// err := syscall.Kill(-proc.Pid, syscall.SIGKILL)
+		kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(proc.Pid))
+		er := kill.Run()
+		if er == nil {
 			return nil
 		}
-		if strings.Contains(err.Error(), "no such process") {
+		if strings.Contains(er.Error(), "no such process") {
 			return nil
 		}
-		return err
+		return er
 	}
 	if err := resolver(); err != nil {
 		return xerror.New(op, err)
